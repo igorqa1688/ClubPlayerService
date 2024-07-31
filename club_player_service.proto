@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+
+option csharp_namespace = "ClubPlayerServiceGrpc";
+
+package club_player_service;
+
+service ClubPlayerServiceGrpc {
+	rpc GetClubPlayer (ClubPlayerRequest) returns (ClubPlayerResponse);
+	rpc GetClubPlayers (ClubPlayersRequest) returns (ClubPlayersResponse);
+	rpc GetPlayerClubs (GetPlayerClubsRequest) returns (GetPlayerClubsResponse);
+	rpc CreateClubPlayer (CreateClubPlayerRequest) returns (ClubPlayerResponse);
+	rpc DeleteClubPlayer (ClubPlayerRequest) returns (google.protobuf.BoolValue);
+
+	rpc UpdatePlayerClubRole (UpdatePlayerClubRoleRequest) returns (ClubPlayerResponse);
+
+	rpc UpdatePlayerAllowPlay (UpdatePlayerAllowPlayRequest) returns (ClubPlayerResponse);
+	rpc UpdatePlayerDescription (UpdatePlayerDescriptionRequest) returns (ClubPlayerResponse);
+	rpc UpdatePlayerTags (UpdatePlayerTagsRequest) returns (ClubPlayerResponse);
+}
+
+message ClubPlayerRequest {
+  string player_guid = 1;
+  string club_guid = 2;
+}
+
+message ClubPlayerResponse {
+  string guid = 1;
+  string player_guid = 2;
+  string club_guid = 3;
+
+  PlayerClubRole player_club_role = 4;
+
+  bool allow_play = 5;
+  string description = 6;
+  repeated string tags_guids = 7;
+}
+
+// GetClubPlayers
+message ClubPlayersRequest {
+	string club_guid = 1;
+}
+
+message ClubPlayersResponse {
+	repeated ClubPlayerResponse players = 1;
+}
+//***
+
+//GetPlayerClubs
+message GetPlayerClubsRequest {
+	string player_guid = 1;
+}
+
+message GetPlayerClubsResponse {
+	repeated ClubPlayerResponse player_clubs = 1;
+}
+//***
+
+// CreateClubPlayer
+message CreateClubPlayerRequest {
+	ClubPlayerRequest player = 1;
+	PlayerClubRole player_club_role = 2;
+}
+
+// UpdatePlayerClubRole
+message UpdatePlayerClubRoleRequest {
+	ClubPlayerRequest player = 1;
+	PlayerClubRole player_club_role = 2;
+}
+//***
+
+// UpdatePlayer
+message UpdatePlayerAllowPlayRequest {
+	ClubPlayerRequest player = 1;
+	bool allow_play = 2;
+}
+
+message UpdatePlayerDescriptionRequest {	
+	ClubPlayerRequest player = 1;
+	string description = 2;
+}
+
+message UpdatePlayerTagsRequest {
+	ClubPlayerRequest player = 1;
+	repeated string tags_guids = 2;
+}
+//***
+
+enum PlayerClubRole {
+	NONE = 0;
+	PLAYER = 1;
+	MANAGER = 2;
+	OWNER = 3;
+}
