@@ -26,8 +26,7 @@ def create_club_player():
         # Отправка запроса на сервер и получение ответа
         response = stub.CreateClubPlayer(request)
         try:
-            respJson = response.guid
-            print(len(respJson))
+            return response
         except Exception as execpt:
             print(execpt)
 
@@ -44,12 +43,6 @@ def get_clubs_player():
         # Отправка запроса на сервер и получение ответа
         response = stub.GetClubPlayers(request)
         try:
-            respJson = response
-            print(respJson)
+            print(response)
         except Exception as execpt:
             print(execpt)
-
-
-create_club_player()
-
-get_clubs_player()
