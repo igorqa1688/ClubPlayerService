@@ -40,7 +40,7 @@ def update_player_tags( player_guid: str, new_tags: list[str]) -> bool:
         stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(channel)
         playerData = {"club_guid": clubGuid, "player_guid": playerGuid}
         tags_guids = new_tags
-        request = UpdatePlayerTagsRequest(player=playerData,tags_guids=tags_guids)
+        request = UpdatePlayerTagsRequest(player=playerData, tags_guids=tags_guids)
         response = stub.UpdatePlayerTags(request)
         print(response)
         return response
