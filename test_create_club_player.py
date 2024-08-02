@@ -1,35 +1,5 @@
-import grpc
-import pytest
 import club_player_service_pb2
-import club_player_service_pb2_grpc
-from functions import generate_guid
-from global_vars import server
-
-
-@pytest.fixture(scope="module")
-def grpc_channel():
-    """Создание gRPC-канала для подключения к серверу"""
-    with grpc.insecure_channel(server) as channel:
-        yield channel
-
-
-@pytest.fixture(scope="module")
-def grpc_stub(grpc_channel):
-    """Создание gRPC-клиентского стаба"""
-    stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
-    return stub
-
-
-@pytest.fixture(scope="session")
-def generatePlayerGuid():
-    playerGuid = generate_guid()
-    return playerGuid
-
-
-@pytest.fixture(scope="session")
-def generateClubGuid():
-    clubGuid = generate_guid()
-    return clubGuid
+from conftest import grpc_stub, generatePlayerGuid, generateClubGuid
 
 
 def test_create_club_player(grpc_stub,generatePlayerGuid,generateClubGuid):
