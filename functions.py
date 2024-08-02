@@ -33,3 +33,13 @@ def generateUserDescription(length):
     # Перемешиваем символы
     return ''.join(random.sample(result, len(result)))
 
+
+def randomPlayerRole():
+    user_roles = ["MANAGER", "OWNER", "NONE", "PLAYER"]
+    random_index = random.randint(0, len(user_roles) - 1)
+    if random_index == len(user_roles):
+        random_role = "ROLE INDEX EQUAL ARRAY LENGTH"
+    else:
+        random_role = user_roles[random_index]
+        print(random_role)
+    return random_role
