@@ -8,7 +8,6 @@ from global_vars import server
 def create_club_player():
     playerGuid = generate_guid()
     clubGuid = generate_guid()
-    playerClubRole = randomPlayerRole()
     # Создание gRPC-канала для подключения к серверу
     with grpc.insecure_channel(server) as channel:
         stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(channel)
@@ -19,12 +18,13 @@ def create_club_player():
                 player_guid=playerGuid,
                 club_guid=clubGuid
             ),
-            player_club_role=playerClubRole
+            player_club_role=2
         )
 
         try:
             # Отправка запроса на сервер и получение ответа
             response = stub.CreateClubPlayer(request)
+            print(response.player_club_role)
             return response
         except Exception as execpt:
             print(execpt)
