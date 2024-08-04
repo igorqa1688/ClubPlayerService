@@ -41,5 +41,4 @@ def randomPlayerRole():
         random_role = "ROLE INDEX EQUAL ARRAY LENGTH"
     else:
         random_role = user_roles[random_index]
-        print(random_role)
     return random_role

@@ -3,7 +3,7 @@ import club_player_service_pb2
 from conftest import grpc_stub, createPlayer
 
 
-def test_update_player_tags(grpc_stub, createPlayer):
+def test_update_player_description(grpc_stub, createPlayer):
     # Выполнение фикстуры создающей player
     createdPlayer = createPlayer
     # Получение player_guid созданного player

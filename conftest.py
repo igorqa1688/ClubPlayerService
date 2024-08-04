@@ -58,7 +58,8 @@ def createPlayer():
 
 # Фикстура создающая более 1 игрока в клубе
 @pytest.fixture(scope="module")
-def createPlayersInClub(grpc_channel, generateClubGuid):
+def createPlayersInClub(grpc_channel):
+    club_guid = generate_guid()
     players = []
     for _ in range(2):
         player_guid = generate_guid()
@@ -66,13 +67,53 @@ def createPlayersInClub(grpc_channel, generateClubGuid):
         request = club_player_service_pb2.CreateClubPlayerRequest(
             player=club_player_service_pb2.ClubPlayerRequest(
                 player_guid=player_guid,
-                club_guid=generateClubGuid
+                club_guid=club_guid
             ),
             player_club_role=random_player_club_role
         )
         stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
         response = stub.CreateClubPlayer(request)
         players.append(response)
-    return players
+    return players, club_guid
 
 
+@pytest.fixture(scope="module")
+def get_clubs_player(club_guid):
+    # Создание gRPC-канала для подключения к серверу
+    with grpc.insecure_channel(server) as channel:
+        stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(channel)
+
+        # Создание запроса на создание нового игрока клуба
+        request = club_player_service_pb2.ClubPlayersRequest(
+            club_guid=created_user.club_guid
+        )
+        try:
+            # Отправка запроса на сервер и получение ответа
+            response = stub.GetClubPlayers(request)
+            return response
+        except Exception as execpt:
+            print(execpt)
+            return 1
+
+
+@pytest.fixture(scope="module")
+def delete_club_player(grpc_channel,createPlayersInClub):
+    stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
+    # Вызов фикстуры создающей несколько игроков в клубе
+    created_players = createPlayersInClub[0]
+    clubs_guids = []
+    players_guids = []
+
+    for i in created_players:
+        clubs_guids.append(i.club_guid)
+        players_guids.append(i.player_guid)
+
+    request = club_player_service_pb2.ClubPlayerRequest(
+        club_guid=clubs_guids[0],
+        player_guid=players_guids[0])
+    try:
+        response = stub.DeleteClubPlayer(request)
+        return clubs_guids, players_guids
+    except Exception as e:
+        print(e)
+        return 1

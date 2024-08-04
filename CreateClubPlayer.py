@@ -5,7 +5,7 @@ from functions import generate_guid, randomPlayerRole
 from global_vars import server
 
 
-def create_club_player():
+def create_club_player_none():
     playerGuid = generate_guid()
     clubGuid = generate_guid()
     # Создание gRPC-канала для подключения к серверу
@@ -18,7 +18,33 @@ def create_club_player():
                 player_guid=playerGuid,
                 club_guid=clubGuid
             ),
-            player_club_role=2
+            player_club_role=0
+        )
+
+        try:
+            # Отправка запроса на сервер и получение ответа
+            response = stub.CreateClubPlayer(request)
+            print(response.player_club_role)
+            return response
+        except Exception as execpt:
+            print(execpt)
+            return 1
+
+
+def create_club_player_player():
+    playerGuid = generate_guid()
+    clubGuid = generate_guid()
+    # Создание gRPC-канала для подключения к серверу
+    with grpc.insecure_channel(server) as channel:
+        stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(channel)
+
+        # Создание запроса на создание нового игрока клуба
+        request = club_player_service_pb2.CreateClubPlayerRequest(
+            player=club_player_service_pb2.ClubPlayerRequest(
+                player_guid=playerGuid,
+                club_guid=clubGuid
+            ),
+            player_club_role=1
         )
 
         try:
@@ -52,3 +78,7 @@ def get_clubs_player():
         except Exception as execpt:
             print(execpt)
             return 1
+
+
+print(create_club_player_none())
+print(create_club_player_player())
