@@ -1,6 +1,7 @@
 import club_player_service_pb2
 import club_player_service_pb2_grpc
 from conftest import grpc_stub, generateClubGuid, createPlayer, createPlayersInClub, delete_club_player
+from conftest import create_player_in_different_clubs
 from functions import generate_guid, generateUserDescription
 
 
@@ -196,6 +197,40 @@ def test_get_player_clubs(grpc_channel, createPlayer):
     response = stub.GetPlayerClubs(request)
     print(response.player_clubs[0].player_guid)
     for i in range(len(response.player_clubs)):
+        assert len(response.player_clubs[i].guid) == 36
+        assert len(response.player_clubs[i].player_guid) == 36
+        assert len(response.player_clubs[i].club_guid) == 36
+        assert response.player_clubs[i].allow_play == False
+        assert len(response.player_clubs[i].club_guid) == 36
+        assert len(response.player_clubs[i].description) == 0
+        assert len(response.player_clubs[i].tags_guids) == 0
+        assert response.player_clubs[i].player_club_role != None
+
+
+# Получение игрока состоящего в нескольких клубах
+def test_get_player_in_different_clubs(grpc_channel, create_player_in_different_clubs):
+    stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
+    # Размещение player в нескольких клубах
+    created_player = create_player_in_different_clubs
+    data = []
+    data.append(created_player)
+    print("\n", data, "\n")
+    # Получение player_guid из created_player
+    player_guids = [item["player_guid"] for item in data]
+    print(player_guids)
+    # Получение club_guid из created_player
+    clubs_guids = set()
+    for i in created_player:
+        clubs_guids.add(created_player[i].club_guid)
+    print(player_guid, "\n", clubs_guids)
+    request = club_player_service_pb2.ClubPlayerRequest(
+        player_guid=player_guid
+    )
+
+    # Отправка запроса на сервер и получение ответа
+    response = stub.GetPlayerClubs(request)
+    print("\n", response, "\n")
+    for i in range(len(response.clubs_guids)):
         assert len(response.player_clubs[i].guid) == 36
         assert len(response.player_clubs[i].player_guid) == 36
         assert len(response.player_clubs[i].club_guid) == 36

@@ -117,3 +117,24 @@ def delete_club_player(grpc_channel,createPlayersInClub):
     except Exception as e:
         print(e)
         return 1
+
+
+# Фикстура создающая игрока в разных клубах
+@pytest.fixture(scope="module")
+def create_player_in_different_clubs(grpc_channel):
+    player_guid = generate_guid()
+    players = []
+    for _ in range(2):
+        club_guid = generate_guid()
+        random_player_club_role = randomPlayerRole()
+        request = club_player_service_pb2.CreateClubPlayerRequest(
+            player=club_player_service_pb2.ClubPlayerRequest(
+                player_guid=player_guid,
+                club_guid=club_guid
+            ),
+            player_club_role=random_player_club_role
+        )
+        stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
+        response = stub.CreateClubPlayer(request)
+        players.append(response)
+    return players, club_guid
