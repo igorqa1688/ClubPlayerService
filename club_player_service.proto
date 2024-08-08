@@ -18,6 +18,8 @@ service ClubPlayerServiceGrpc {
 	rpc UpdatePlayerAllowPlay (UpdatePlayerAllowPlayRequest) returns (ClubPlayerResponse);
 	rpc UpdatePlayerDescription (UpdatePlayerDescriptionRequest) returns (ClubPlayerResponse);
 	rpc UpdatePlayerTags (UpdatePlayerTagsRequest) returns (ClubPlayerResponse);
+
+	rpc RemovePlayersTag (RemovePlayersTagRequest) returns (RemovePlayersTagResponse);
 }
 
 message ClubPlayerRequest {
@@ -84,6 +86,16 @@ message UpdatePlayerDescriptionRequest {
 message UpdatePlayerTagsRequest {
 	ClubPlayerRequest player = 1;
 	repeated string tags_guids = 2;
+}
+//***
+
+//RemovePlayersTag
+message RemovePlayersTagRequest {
+	string tag_guid = 1;
+}
+
+message RemovePlayersTagResponse {
+	int32 affected_players = 1;
 }
 //***
 

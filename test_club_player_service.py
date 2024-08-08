@@ -1,8 +1,9 @@
+import re
 import club_player_service_pb2
 import club_player_service_pb2_grpc
 from conftest import grpc_stub, generateClubGuid, createPlayer, createPlayersInClub, delete_club_player
 from conftest import create_player_in_different_clubs
-from functions import generate_guid, generateUserDescription
+from functions import generate_guid, generateUserDescription, randomPlayerRole
 
 
 def test_create_club_player_with_role_none(grpc_channel):
@@ -114,6 +115,72 @@ def test_create_club_player_with_role_owner(grpc_channel):
     assert len(response.tags_guids) == 0
 
 
+# Игрок состоит в разных клубах
+def test_create_club_player_in_different_club(grpc_channel):
+    player_guid = generate_guid()
+    clubs = []
+    club_count = 2
+    for _ in range(club_count):
+        club_guid = generate_guid()
+        random_player_club_role = randomPlayerRole()
+        request = club_player_service_pb2.CreateClubPlayerRequest(
+            player=club_player_service_pb2.ClubPlayerRequest(
+                player_guid=player_guid,
+                club_guid=club_guid
+            ),
+            player_club_role=random_player_club_role
+        )
+        stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
+        response = stub.CreateClubPlayer(request)
+        
+    assert response.player_guid == player_guid
+    assert response.club_guid == club_guid
+    assert len(response.guid) == 36
+    assert response.allow_play == False
+    assert len(response.description) == 0
+    assert len(response.tags_guids) == 0
+
+
+# Получение игрока состоящего в нескольких клубах
+def test_get_player_in_different_clubs(grpc_channel, create_player_in_different_clubs):
+    stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
+    # Размещение player в нескольких клубах
+    created_player = create_player_in_different_clubs[0]
+    # Получение player_guid
+    player_guid_set = set()
+    player_guid = str()
+    for i in range(len(created_player)):
+        player_guid_set.add(created_player[i].player_guid)
+    for i in player_guid_set:
+        player_guid = i
+    # Получение clubs_guids
+    clubs_guids = set()
+    for i in range(len(created_player)):
+        clubs_guids.add(created_player[i].club_guid)
+    print(clubs_guids)
+
+    request = club_player_service_pb2.ClubPlayerRequest(
+        player_guid=player_guid
+    )
+    # Отправка запроса на сервер и получение ответа
+    response = stub.GetPlayerClubs(request)
+    print("\nplayer_clubs:\n", response.player_clubs,"\n")
+
+    assert len(clubs_guids) == 2
+    assert len(player_guid_set) == 1
+
+    for i in range(len(clubs_guids)):
+        assert len(response.player_clubs[i].guid) == 36
+        assert len(response.player_clubs[i].player_guid) == 36
+        assert len(response.player_clubs[i].club_guid) == 36
+        assert response.player_clubs[i].allow_play == False
+        assert len(response.player_clubs[i].club_guid) == 36
+        assert len(response.player_clubs[i].description) == 0
+        assert len(response.player_clubs[i].tags_guids) == 0
+        assert len(str(response.player_clubs[i].player_club_role)) != 0
+
+
+# Добавление в клуб более одного игрока
 def test_create_many_players_in_club(grpc_channel, createPlayersInClub):
     expected_count = 2
     # Вызов фикстуры создающей несколько игроков в клубе
@@ -143,6 +210,7 @@ def test_create_many_players_in_club(grpc_channel, createPlayersInClub):
     assert len(player_guids) == expected_count
 
 
+# Удаление игрока из клуба
 def test_delete_club_player(grpc_channel,createPlayersInClub):
     stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
     # Вызов фикстуры создающей несколько игроков в клубе
@@ -207,38 +275,27 @@ def test_get_player_clubs(grpc_channel, createPlayer):
         assert response.player_clubs[i].player_club_role != None
 
 
-# Получение игрока состоящего в нескольких клубах
-def test_get_player_in_different_clubs(grpc_channel, create_player_in_different_clubs):
+# Получение информации об игроке в клубе
+def test_get_player_club(grpc_channel, createPlayer):
     stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
-    # Размещение player в нескольких клубах
-    created_player = create_player_in_different_clubs
-    data = []
-    data.append(created_player)
-    print("\n", data, "\n")
-    # Получение player_guid из created_player
-    player_guids = [item["player_guid"] for item in data]
-    print(player_guids)
-    # Получение club_guid из created_player
-    clubs_guids = set()
-    for i in created_player:
-        clubs_guids.add(created_player[i].club_guid)
-    print(player_guid, "\n", clubs_guids)
+    created_player = createPlayer
+    player_guid = created_player.player_guid
+    club_guid = created_player.club_guid
     request = club_player_service_pb2.ClubPlayerRequest(
-        player_guid=player_guid
+        player_guid=player_guid,
+        club_guid=club_guid
     )
 
     # Отправка запроса на сервер и получение ответа
-    response = stub.GetPlayerClubs(request)
-    print("\n", response, "\n")
-    for i in range(len(response.clubs_guids)):
-        assert len(response.player_clubs[i].guid) == 36
-        assert len(response.player_clubs[i].player_guid) == 36
-        assert len(response.player_clubs[i].club_guid) == 36
-        assert response.player_clubs[i].allow_play == False
-        assert len(response.player_clubs[i].club_guid) == 36
-        assert len(response.player_clubs[i].description) == 0
-        assert len(response.player_clubs[i].tags_guids) == 0
-        assert response.player_clubs[i].player_club_role != None
+    response = stub.GetClubPlayer(request)
+    assert len(response.guid) == 36
+    assert len(response.player_guid) == 36
+    assert len(response.club_guid) == 36
+    assert response.allow_play == False
+    assert len(response.club_guid) == 36
+    assert len(response.description) == 0
+    assert len(response.tags_guids) == 0
+    assert len(str(response.player_club_role)) != 0
 
 
 def test_create_club_player(grpc_channel,generatePlayerGuid,generateClubGuid):
@@ -317,7 +374,7 @@ def test_update_player_allow_play_to_false(grpc_channel,createPlayer):
     assert len(response_to_false.tags_guids) == 0
 
 
-def test_get_clubs_player(grpc_stub,createPlayer):
+def test_get_club_players(grpc_stub,createPlayer):
     created_player_in_club = createPlayer
     club_guid = created_player_in_club.club_guid
     player_guid = created_player_in_club.player_guid
