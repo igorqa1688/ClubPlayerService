@@ -388,31 +388,31 @@ def test_get_players_in_club(grpc_stub,createPlayersInClub):
 
 def test_update_player_description(grpc_stub, createPlayer):
     # Выполнение фикстуры создающей player
-    createdPlayer = createPlayer
+    created_player = createPlayer
     # Получение player_guid созданного player
-    playerGuid = createdPlayer.player_guid
+    player_guid = created_player.player_guid
     # Получение club_guid созданного player
-    clubGuid = createdPlayer.club_guid
+    club_guid = created_player.club_guid
     # Объявление переменной для хранения сгенерированного описания
-    descriptionLen = 50
-    genDescription = generateUserDescription(descriptionLen)
+    descr_len = 50
+    gen_description = generateUserDescription(descr_len)
     # Формирование данных для передачи в запрос
-    playerData = {"club_guid": clubGuid, "player_guid": playerGuid}
+    player_data = {"club_guid": club_guid, "player_guid": player_guid}
 
     # Выполнение запроса
-    request = club_player_service_pb2.UpdatePlayerDescriptionRequest(description=genDescription, player=playerData)
+    request = club_player_service_pb2.UpdatePlayerDescriptionRequest(description=gen_description, player=player_data)
     # Получение ответа
     response = grpc_stub.UpdatePlayerDescription(request)
     # Получение описания player из ответа на запрос
-    responsePlayerDescription = response.description
+    response_player_description = response.description
 
     # Тест проверяющий что обновлен тестируемый игрок
-    assert response.player_guid == playerGuid
-    assert response.club_guid == clubGuid
+    assert response.player_guid == player_guid
+    assert response.club_guid == club_guid
     # Тест проверяющий что длина описания из ответа равна длине описания из переменной
-    assert len(responsePlayerDescription) == descriptionLen
+    assert len(response_player_description) == descr_len
     # Тест проверяющий что описание из ответа совпадает с сгенерированным описанием
-    assert response.description == genDescription
+    assert response.description == gen_description
 
 
 # Тест проверяет что в запись более одного уникального тэга возможна
@@ -450,11 +450,11 @@ def test_update_player_tags_unique_tags(grpc_stub,createPlayer):
 # Тест проверяет что запись более одного не уникального тэга возможна
 def test_update_player_tags_non_unique_tags(grpc_stub,createPlayer):
     # Выполнение фикстуры создающей player
-    createdPlayer = createPlayer
+    created_player = createPlayer
     # Получение player_guid созданного player
-    player_guid = createdPlayer.player_guid
+    player_guid = created_player.player_guid
     # Получение club_guid созданного player
-    club_guid = createdPlayer.club_guid
+    club_guid = created_player.club_guid
     # Объявление списка для хранения tag_guid'ов
     new_tags = []
     # Генерация одного tag_guid
@@ -477,3 +477,47 @@ def test_update_player_tags_non_unique_tags(grpc_stub,createPlayer):
     assert response.club_guid == club_guid
     # Тест проверяющий что в tags_guids не записан дубль и записан только один tag_guid
     assert tags_count == 1
+
+
+# Тест удаления тэга назначенного игроку
+def test_remove_player_tag_in_player(grpc_channel):
+    stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
+    # Количество создаваемых player'ов в клубе
+    created_players_count = 1
+    # Вызов функции создающей несколько игроков в клубе
+    created_players_result = create_players_in_club(created_players_count)
+    created_players_list = created_players_result[0]
+    club_guid = created_players_result[1]
+    player_guid = created_players_list[0].player_guid
+
+    # Генерация одного tag_guid
+    new_tag = generate_guid()
+    # Объявление списка для хранения tag_guid'ов
+    tags_guids = []
+    tags_guids.append(new_tag)
+    # Формирование данных для передачи в запрос
+    player_data = {"club_guid": club_guid, "player_guid": player_guid}
+    # Выполнение запроса на присваивание тэга игроку
+    request_update_tags = club_player_service_pb2.UpdatePlayerTagsRequest(player=player_data, tags_guids=tags_guids)
+    # Получение ответа на запрос обновления списка тэгов
+    response_update_tags = stub.UpdatePlayerTags(request_update_tags)
+    # Тэг добавлен игроку
+    assert new_tag in response_update_tags.tags_guids
+
+    # Удаление тэга назначенного игроку
+    request_remove_tag = club_player_service_pb2.RemovePlayersTagRequest(tag_guid=new_tag)
+    response_remove_tag = stub.RemovePlayersTag(request_remove_tag)
+    assert response_remove_tag.affected_players == 1
+
+
+# Тест удаления тэга не назначенного игроку
+def test_remove_player_tag_in_player(grpc_channel):
+    stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
+
+    # Генерация одного tag_guid
+    new_tag = generate_guid()
+
+    # Удаление тэга не назначенного игроку
+    request_remove_tag = club_player_service_pb2.RemovePlayersTagRequest(tag_guid=new_tag)
+    response_remove_tag = stub.RemovePlayersTag(request_remove_tag)
+    assert response_remove_tag.affected_players == 0
