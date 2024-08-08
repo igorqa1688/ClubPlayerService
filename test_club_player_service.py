@@ -1,9 +1,9 @@
-import re
+
 import club_player_service_pb2
 import club_player_service_pb2_grpc
 from conftest import grpc_stub, generateClubGuid, createPlayer, createPlayersInClub, delete_club_player
 from conftest import create_player_in_different_clubs
-from functions import generate_guid, generateUserDescription, randomPlayerRole
+from functions import generate_guid, generateUserDescription, randomPlayerRole, create_players_in_club
 
 
 def test_create_club_player_with_role_none(grpc_channel):
@@ -45,11 +45,7 @@ def test_create_club_player_with_role_player(grpc_channel):
         player_club_role="PLAYER"
     )
 
-    try:
-        response = stub.CreateClubPlayer(request)
-    except Exception as e:
-        print(e)
-        return 1
+    response = stub.CreateClubPlayer(request)
 
     assert response.player_guid == player_guid
     assert response.club_guid == club_guid
@@ -72,11 +68,8 @@ def test_create_club_player_with_role_manager(grpc_channel):
         player_club_role=2
     )
 
-    try:
-        response = stub.CreateClubPlayer(request)
-    except Exception as e:
-        print(e)
-        return 1
+
+    response = stub.CreateClubPlayer(request)
 
     assert response.player_guid == player_guid
     assert response.club_guid == club_guid
@@ -100,11 +93,7 @@ def test_create_club_player_with_role_owner(grpc_channel):
         player_club_role="OWNER"
     )
 
-    try:
-        response = stub.CreateClubPlayer(request)
-    except Exception as e:
-        print(e)
-        return 1
+    response = stub.CreateClubPlayer(request)
 
     assert response.player_guid == player_guid
     assert response.club_guid == club_guid
@@ -157,14 +146,12 @@ def test_get_player_in_different_clubs(grpc_channel, create_player_in_different_
     clubs_guids = set()
     for i in range(len(created_player)):
         clubs_guids.add(created_player[i].club_guid)
-    print(clubs_guids)
 
     request = club_player_service_pb2.ClubPlayerRequest(
         player_guid=player_guid
     )
     # Отправка запроса на сервер и получение ответа
     response = stub.GetPlayerClubs(request)
-    print("\nplayer_clubs:\n", response.player_clubs,"\n")
 
     assert len(clubs_guids) == 2
     assert len(player_guid_set) == 1
@@ -211,45 +198,49 @@ def test_create_many_players_in_club(grpc_channel, createPlayersInClub):
 
 
 # Удаление игрока из клуба
-def test_delete_club_player(grpc_channel,createPlayersInClub):
+def test_delete_club_player(grpc_channel):
     stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
-    # Вызов фикстуры создающей несколько игроков в клубе
-    created_players = createPlayersInClub[0]
-
-    clubs_guids = []
+    # Количество создаваемых player'ов в клубе
+    created_players_count = 2
+    # Вызов функции создающей несколько игроков в клубе
+    created_players_result = create_players_in_club(created_players_count)
+    created_players_list = created_players_result[0]
+    club_guid = created_players_result[1]
     players_guids = []
 
-    for i in created_players:
-        clubs_guids.append(i.club_guid)
+    # Получение guid созданных в клубе player'ов
+    for i in created_players_list:
         players_guids.append(i.player_guid)
+    # Получение удаляемого guid
+    delete_guid = players_guids[0]
 
+    # Удаление player'а
     request = club_player_service_pb2.ClubPlayerRequest(
-        club_guid=clubs_guids[0],
-        player_guid=players_guids[0])
-    try:
-        response = stub.DeleteClubPlayer(request)
-        print(response)
-    except Exception as e:
-        print(e)
-        return 1
+        club_guid=club_guid,
+        player_guid=delete_guid)
+    response_delete_player = stub.DeleteClubPlayer(request)
+    response_delete_value = str(response_delete_player.value)
 
-    assert response.value == True
+    # Player удален
+    assert response_delete_value == "True"
 
-
-# Получение игроков в клубе после удаления игрока
-def test_get_club_players_after_delete(grpc_channel, delete_club_player):
-    stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
-    created_players_in_club = delete_club_player
-    clubs_guids = created_players_in_club[0]
-    player_guid = created_players_in_club[1]
-    request = club_player_service_pb2.ClubPlayersRequest(
-        club_guid=clubs_guids[0]
+    # Формирование запроса на получение списка игроков
+    request_get_club_players = club_player_service_pb2.ClubPlayersRequest(
+        club_guid=club_guid
     )
 
-    # Отправка запроса на сервер и получение ответа
-    response = stub.GetClubPlayers(request)
+    # Получение списка игроков в клубе после удаления
+    response_get_club_players = stub.GetClubPlayers(request_get_club_players)
 
-    assert len(response.players) == 1
+    # Получение player_guid's из response_get_club_players
+    response_players_guids = []
+    for i in range(len(response_get_club_players.players)):
+        response_players_guids.append(response_get_club_players.players[i].player_guid)
+
+    # Тест проверяет что удаленный player_guid не отображается в списке игроков клуба
+    assert delete_guid not in response_players_guids
+    # Количество игроков в клубе меньше на единицу чем создано
+    assert len(response_get_club_players.players) == created_players_count-1
 
 
 # Получение игрока состоящего в одном клубе
@@ -307,14 +298,10 @@ def test_create_club_player(grpc_channel,generatePlayerGuid,generateClubGuid):
             player_guid=player_guid,
             club_guid=club_guid
         ),
-        player_club_role=0
+        player_club_role=randomPlayerRole()
     )
 
-    try:
-        response = stub.CreateClubPlayer(request)
-    except Exception as e:
-        print(e)
-        return 1
+    response = stub.CreateClubPlayer(request)
 
     assert response.player_guid == player_guid
     assert response.club_guid == club_guid
@@ -323,7 +310,7 @@ def test_create_club_player(grpc_channel,generatePlayerGuid,generateClubGuid):
     assert len(response.tags_guids) == 0
 
 
-def test_update_player_allow_play_to_true(grpc_channel,createPlayer):
+def test_update_player_allow_play_to_true(grpc_channel, createPlayer):
     stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
     player_guid = createPlayer.player_guid
     club_guid = createPlayer.club_guid
@@ -335,12 +322,7 @@ def test_update_player_allow_play_to_true(grpc_channel,createPlayer):
         allow_play=True
     )
 
-    try:
-        response = stub.UpdatePlayerAllowPlay(request)
-        print(response)
-    except Exception as e:
-        print(e)
-        return 1
+    response = stub.UpdatePlayerAllowPlay(request)
 
     assert response.player_guid == player_guid
     assert response.club_guid == club_guid
@@ -349,7 +331,7 @@ def test_update_player_allow_play_to_true(grpc_channel,createPlayer):
     assert len(response.tags_guids) == 0
 
 
-def test_update_player_allow_play_to_false(grpc_channel,createPlayer):
+def test_update_player_allow_play_to_false(grpc_channel, createPlayer):
     stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
     player_guid = createPlayer.player_guid
     club_guid = createPlayer.club_guid
@@ -360,12 +342,9 @@ def test_update_player_allow_play_to_false(grpc_channel,createPlayer):
     # Запрос меняет allow_play на False
     request_to_false = club_player_service_pb2.UpdatePlayerAllowPlayRequest(
         allow_play=False, player=player_data)
-    try:
-        response_to_true = stub.UpdatePlayerAllowPlay(request_to_true)
-        response_to_false = stub.UpdatePlayerAllowPlay(request_to_false)
-    except Exception as e:
-        print(e)
-        return 1
+
+    response_to_true = stub.UpdatePlayerAllowPlay(request_to_true)
+    response_to_false = stub.UpdatePlayerAllowPlay(request_to_false)
 
     assert response_to_false.player_guid == player_guid
     assert response_to_false.club_guid == club_guid
@@ -374,6 +353,7 @@ def test_update_player_allow_play_to_false(grpc_channel,createPlayer):
     assert len(response_to_false.tags_guids) == 0
 
 
+# Получение игроков в клубе - в клубе один игрок
 def test_get_club_players(grpc_stub,createPlayer):
     created_player_in_club = createPlayer
     club_guid = created_player_in_club.club_guid
@@ -385,9 +365,25 @@ def test_get_club_players(grpc_stub,createPlayer):
 
     # Отправка запроса на сервер и получение ответа
     response = grpc_stub.GetClubPlayers(request)
-
     assert response.players[0].player_guid == player_guid
     assert response.players[0].club_guid == club_guid
+
+
+# Получение игроков в клубе - в клубе более одного игрока
+def test_get_players_in_club(grpc_stub,createPlayersInClub):
+    created_players_in_club = createPlayersInClub[0]
+
+    club_guid = created_players_in_club[0].club_guid
+    player_guid = created_players_in_club[0].player_guid
+
+    for i in range(len(created_players_in_club)):
+        assert len(created_players_in_club[i].player_guid) == 36
+        assert created_players_in_club[i].club_guid == club_guid
+        assert len(str(created_players_in_club[i].player_club_role)) > 0
+        assert created_players_in_club[i].allow_play == False
+        assert len(created_players_in_club[i].description) == 0
+        assert len(created_players_in_club[i].tags_guids) == 0
+
 
 
 def test_update_player_description(grpc_stub, createPlayer):
@@ -433,7 +429,6 @@ def test_update_player_tags_unique_tags(grpc_stub,createPlayer):
     for i in range(2):
         new_tags.append(generate_guid())
         i += 1
-    print(new_tags)
     # Формирование данных для передачи в запрос
     player_data = {"club_guid": club_guid, "player_guid": player_guid}
     tags_guids = new_tags
@@ -457,9 +452,9 @@ def test_update_player_tags_non_unique_tags(grpc_stub,createPlayer):
     # Выполнение фикстуры создающей player
     createdPlayer = createPlayer
     # Получение player_guid созданного player
-    playerGuid = createdPlayer.player_guid
+    player_guid = createdPlayer.player_guid
     # Получение club_guid созданного player
-    clubGuid = createdPlayer.club_guid
+    club_guid = createdPlayer.club_guid
     # Объявление списка для хранения tag_guid'ов
     new_tags = []
     # Генерация одного tag_guid
@@ -469,16 +464,16 @@ def test_update_player_tags_non_unique_tags(grpc_stub,createPlayer):
         new_tags.append(new_tag)
         i += 1
     # Формирование данных для передачи в запрос
-    playerData = {"club_guid": clubGuid, "player_guid": playerGuid}
+    player_data = {"club_guid": club_guid, "player_guid": player_guid}
     tags_guids = new_tags
     # Выполнение запроса
-    request = club_player_service_pb2.UpdatePlayerTagsRequest(player=playerData, tags_guids=tags_guids)
+    request = club_player_service_pb2.UpdatePlayerTagsRequest(player=player_data, tags_guids=tags_guids)
     # Получение ответа
     response = grpc_stub.UpdatePlayerTags(request)
     # Получение количества элементов в tags_guids из ответа на запрос
-    tagsCount = len(response.tags_guids)
+    tags_count = len(response.tags_guids)
     # Тест проверяющий что обновлен тестируемый игрок
-    assert response.player_guid == playerGuid
-    assert response.club_guid == clubGuid
+    assert response.player_guid == player_guid
+    assert response.club_guid == club_guid
     # Тест проверяющий что в tags_guids не записан дубль и записан только один tag_guid
-    assert tagsCount == 1
+    assert tags_count == 1

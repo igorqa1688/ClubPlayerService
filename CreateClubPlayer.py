@@ -5,6 +5,12 @@ from functions import generate_guid, randomPlayerRole
 from global_vars import server
 
 
+def grpc_channel():
+    #Создание gRPC-канала для подключения к серверу
+    with grpc.insecure_channel(server) as channel:
+        yield channel
+
+
 def create_club_player_none():
     playerGuid = generate_guid()
     clubGuid = generate_guid()
@@ -31,7 +37,7 @@ def create_club_player_none():
             return 1
 
 
-def create_club_player_player():
+def create_club_player():
     playerGuid = generate_guid()
     clubGuid = generate_guid()
     # Создание gRPC-канала для подключения к серверу
@@ -80,5 +86,3 @@ def get_clubs_player():
             return 1
 
 
-print(create_club_player_none())
-print(create_club_player_player())
