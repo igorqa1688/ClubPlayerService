@@ -1,9 +1,8 @@
-
 import club_player_service_pb2
 import club_player_service_pb2_grpc
-from conftest import grpc_stub, generateClubGuid, createPlayer, createPlayersInClub, delete_club_player
-from conftest import create_player_in_different_clubs
+from conftest import grpc_stub, generateClubGuid, createPlayer, createPlayersInClub, create_player_in_different_clubs
 from functions import generate_guid, generateUserDescription, randomPlayerRole, create_players_in_club
+from global_vars import club_roles
 
 
 def test_create_club_player_with_role_none(grpc_channel):
@@ -385,7 +384,6 @@ def test_get_players_in_club(grpc_stub,createPlayersInClub):
         assert len(created_players_in_club[i].tags_guids) == 0
 
 
-
 def test_update_player_description(grpc_stub, createPlayer):
     # Выполнение фикстуры создающей player
     created_player = createPlayer
@@ -445,6 +443,38 @@ def test_update_player_tags_unique_tags(grpc_stub,createPlayer):
     assert tags_count == 2
     # Тест проверяющий что в player записаны те tag_guid которые были сгенерированы
     assert sorted(tags_guids) == sorted(response.tags_guids)
+
+
+# Тест добавления тэга более чем одному игроку
+def test_add_tag_to_players(grpc_channel):
+    stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
+    # Количество создаваемых player'ов в клубе
+    created_players_count = 2
+    # Вызов функции создающей несколько игроков в клубе
+    created_players_result = create_players_in_club(created_players_count)
+    # Получение списка созданных игроков
+    created_players_list = created_players_result[0]
+    # Получение клуба созданных игроков
+    club_guid = created_players_result[1]
+    player_guids = []
+    for i in range(len(created_players_list)):
+        player_guids.append(created_players_list[i].player_guid)
+
+    # Генерация одного tag_guid
+    new_tag = generate_guid()
+    # Объявление списка для хранения tag_guid'ов
+    tags_guids = []
+    tags_guids.append(new_tag)
+    # Назначение созданного тэга более чем одному игроку
+    for i in range(len(player_guids)):
+        # Формирование данных для передачи в запрос
+        player_data = {"club_guid": club_guid, "player_guid": player_guids[i]}
+        # Выполнение запроса на присваивание тэга игроку
+        request_update_tags = club_player_service_pb2.UpdatePlayerTagsRequest(player=player_data, tags_guids=tags_guids)
+        # Получение ответа на запрос обновления списка тэгов
+        response_update_tags = stub.UpdatePlayerTags(request_update_tags)
+        # Тэг добавлен игроку
+        assert new_tag in response_update_tags.tags_guids
 
 
 # Тест проверяет что запись более одного не уникального тэга возможна
@@ -510,7 +540,45 @@ def test_remove_player_tag_in_player(grpc_channel):
     assert response_remove_tag.affected_players == 1
 
 
-# Тест удаления тэга не назначенного игроку
+# Тест удаления тэга назначенного более чем одному игроку
+def test_remove_player_tag_in_players(grpc_channel):
+    stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
+    # Количество создаваемых player'ов в клубе
+    created_players_count = 2
+    # Вызов функции создающей несколько игроков в клубе
+    created_players_result = create_players_in_club(created_players_count)
+    # Получение списка созданных игроков
+    created_players_list = created_players_result[0]
+    # Получение клуба созданных игроков
+    club_guid = created_players_result[1]
+    player_guids = []
+    for i in range(len(created_players_list)):
+        player_guids.append(created_players_list[i].player_guid)
+
+    # Генерация одного tag_guid
+    new_tag = generate_guid()
+    # Объявление списка для хранения tag_guid'ов
+    tags_guids = []
+    tags_guids.append(new_tag)
+    # Назначение созданного тэга более чем одному игроку
+    for i in range(len(player_guids)):
+        # Формирование данных для передачи в запрос
+        player_data = {"club_guid": club_guid, "player_guid": player_guids[i]}
+        # Выполнение запроса на присваивание тэга игроку
+        request_update_tags = club_player_service_pb2.UpdatePlayerTagsRequest(player=player_data, tags_guids=tags_guids)
+        # Получение ответа на запрос обновления списка тэгов
+        response_update_tags = stub.UpdatePlayerTags(request_update_tags)
+        # Тэг добавлен игроку
+        assert new_tag in response_update_tags.tags_guids
+
+    # Удаление тэга назначенного игроку
+    request_remove_tag = club_player_service_pb2.RemovePlayersTagRequest(tag_guid=new_tag)
+    response_remove_tag = stub.RemovePlayersTag(request_remove_tag)
+    # Тэг удален у двух игроков
+    assert response_remove_tag.affected_players == created_players_count
+
+
+# Тест удаления тэга не назначенного ни одному игроку
 def test_remove_player_tag_in_player(grpc_channel):
     stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
 
@@ -521,3 +589,28 @@ def test_remove_player_tag_in_player(grpc_channel):
     request_remove_tag = club_player_service_pb2.RemovePlayersTagRequest(tag_guid=new_tag)
     response_remove_tag = stub.RemovePlayersTag(request_remove_tag)
     assert response_remove_tag.affected_players == 0
+
+
+# Тест изменения роли игроку
+def test_update_player_club_role(grpc_channel):
+    stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
+    # Количество создаваемых player'ов в клубе
+    created_players_count = 1
+    # Вызов функции создающей несколько игроков в клубе
+    created_players_result = create_players_in_club(created_players_count)
+    # Извлечение из созданного игрока player_guid и club_guid
+    player_data = created_players_result[0]
+    player_guid = player_data[0].player_guid
+    club_guid = created_players_result[1]
+    player = {"club_guid":club_guid, "player_guid": player_guid}
+    # Получение ключей-названий ролей из словаря
+    roles = list(club_roles.keys())
+    # Изменение роли в цикле
+    for i in range(len(roles)):
+        request_update = club_player_service_pb2.UpdatePlayerClubRoleRequest(player=player, player_club_role=roles[i])
+        response_update_role = stub.UpdatePlayerClubRole(request_update)
+        new_role_id = response_update_role.player_club_role
+        role_id = club_roles.get(roles[i])
+        # Полученный из response club_role id соответствует club_role id из словаря
+        assert new_role_id == role_id
+
