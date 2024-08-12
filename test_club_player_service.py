@@ -5,6 +5,7 @@ from functions import generate_guid, generateUserDescription, randomPlayerRole, 
 from global_vars import club_roles
 
 
+# Создание игрока с ролью NONE
 def test_create_club_player_with_role_none(grpc_channel):
     stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
     player_guid = generate_guid()
@@ -32,6 +33,7 @@ def test_create_club_player_with_role_none(grpc_channel):
     assert len(response.tags_guids) == 0
 
 
+# Создание игрока с ролью PLAYER
 def test_create_club_player_with_role_player(grpc_channel):
     stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
     player_guid = generate_guid()
@@ -55,6 +57,7 @@ def test_create_club_player_with_role_player(grpc_channel):
     assert len(response.tags_guids) == 0
 
 
+# Создание игрока с ролью MANAGER
 def test_create_club_player_with_role_manager(grpc_channel):
     stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
     player_guid = generate_guid()
@@ -79,8 +82,8 @@ def test_create_club_player_with_role_manager(grpc_channel):
     assert len(response.tags_guids) == 0
 
 
+# Создание игрока с ролью OWNER
 def test_create_club_player_with_role_owner(grpc_channel):
-
     stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
     player_guid = generate_guid()
     club_guid = generate_guid()
