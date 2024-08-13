@@ -3,3 +3,4 @@
 3. Выполнить команду в папке с *.proto файлом:   python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. proto_file_name.proto;
 4. В файле global_vars.py задать актуальный адрес сервера и порт.
 5. Используемая версия python: 3.12
+6. Файл с тестами: test_club_player_service.py остальные файлы примеры или зависимости.
