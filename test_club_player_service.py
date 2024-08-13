@@ -291,6 +291,7 @@ def test_get_player_club(grpc_channel, createPlayer):
     assert len(str(response.player_club_role)) != 0
 
 
+# Создание игрока с случайной ролью
 def test_create_club_player(grpc_channel,generatePlayerGuid,generateClubGuid):
     stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
     player_guid = generatePlayerGuid
@@ -312,6 +313,7 @@ def test_create_club_player(grpc_channel,generatePlayerGuid,generateClubGuid):
     assert len(response.tags_guids) == 0
 
 
+# Изменение allow_play на true
 def test_update_player_allow_play_to_true(grpc_channel, createPlayer):
     stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
     player_guid = createPlayer.player_guid
@@ -333,6 +335,7 @@ def test_update_player_allow_play_to_true(grpc_channel, createPlayer):
     assert len(response.tags_guids) == 0
 
 
+# Изменение allow_play на false
 def test_update_player_allow_play_to_false(grpc_channel, createPlayer):
     stub = club_player_service_pb2_grpc.ClubPlayerServiceGrpcStub(grpc_channel)
     player_guid = createPlayer.player_guid
@@ -374,7 +377,6 @@ def test_get_club_players(grpc_stub,createPlayer):
 # Получение игроков в клубе - в клубе более одного игрока
 def test_get_players_in_club(grpc_stub,createPlayersInClub):
     created_players_in_club = createPlayersInClub[0]
-
     club_guid = created_players_in_club[0].club_guid
     player_guid = created_players_in_club[0].player_guid
 
@@ -387,6 +389,7 @@ def test_get_players_in_club(grpc_stub,createPlayersInClub):
         assert len(created_players_in_club[i].tags_guids) == 0
 
 
+# Изменение описания игрока
 def test_update_player_description(grpc_stub, createPlayer):
     # Выполнение фикстуры создающей player
     created_player = createPlayer
